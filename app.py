@@ -21,6 +21,13 @@ class PatientSchema(Schema):
     gender = fields.Str()
 
 
+class ObservationSchema(Schema):
+    subject_reference = fields.Str()
+    performer_reference = fields.Str()
+    status = fields.Str()
+    code = fields.Str()
+
+
 @app.route("/api/v1/patients", methods=["GET", "POST"])
 def patients():
     if request.method == 'GET':
@@ -51,4 +58,36 @@ def patients():
 def patients_detail(patient_id):
     if request.method == 'GET':
         response = fhir_session.get(f"{FHIR_URL}/Patient/{patient_id}")
+        return response.json()
+
+
+@app.route("/api/v1/observations", methods=["GET", "POST"])
+def observations():
+    if request.method == 'GET':
+        response = fhir_session.get(f"{FHIR_URL}/Observation")
+        return response.json()
+    elif request.method == "POST":
+        schema = ObservationSchema()
+        data = schema.load(request.json)
+        response = fhir_session.post(
+            f"{FHIR_URL}/Observation",
+            json={
+                "resourceType": "Observation",
+                "subject": {
+                    "reference": data["subject_reference"]
+                },
+                "performer": {
+                    "reference": data["performer_reference"]
+                },
+                "status": "final",
+                "code": {
+                    "coding": [
+                        {
+                            "system": "http://loinc.org",
+                            "code": data["code"],
+                        }
+                    ]
+                }
+            }
+        )
         return response.json()
